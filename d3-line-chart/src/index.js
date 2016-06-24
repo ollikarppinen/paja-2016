@@ -20,10 +20,6 @@ const xAxis = d3.svg.axis().scale(x)
 const yAxis = d3.svg.axis().scale(y)
   .orient('left').ticks(5);
 
-const valueline = d3.svg.line()
-  .x(d => x(d.startTime))
-  .y(d => y(d.duration));
-
 const div = d3.select('body').append('div')
   .attr('class', 'tooltip')
   .style('opacity', 0);
@@ -35,43 +31,53 @@ const svg = d3.select('body')
   .append('g')
   .attr('transform',' translate(' + margin.left + ',' + margin.top + ')');
 
-// let labels = [];
+const durationLine = d3.svg.line()
+  .x(d => x(d.startTime))
+  .y(d => y(d.duration));
+
 d3.json('data.json', (error, dataSets) => {
-  const data = dataSets[0].data.map(d =>
-    ({
-      startTime: parseDate(d.startTime),
-      duration: +d.duration
-    })
-  ).sort(sortByDateAscending);
+  const dataSetsParsed = dataSets.map(ds =>
+    ds.data.map(d =>
+      ({
+        startTime: parseDate(d.startTime),
+        duration: +d.duration,
+        id: d.id
+      })
+    ).sort(sortByDateAscending)
+  );
 
-  x.domain(d3.extent(data, d => d.startTime));
-  y.domain([0, d3.max(data, d => d.duration)]);
+  const dataArray = dataSetsParsed.reduce((a, b) => a.concat(b));
 
-  svg.append('path')
+  x.domain(d3.extent(dataArray, d => d.startTime));
+  y.domain([0, d3.max(dataArray, d => d.duration)]);
+
+  dataSetsParsed.forEach(ds => {
+    svg.append('path')
     .attr('class', 'line')
-    .attr('d', valueline(data));
+    .attr('d', durationLine(ds));
 
-  svg.selectAll('dot')
-    .data(data)
+    svg.selectAll('dot')
+    .data(ds)
     .enter()
     .append('circle')
-    .attr('r', 5)
+    .attr('r', 4)
     .attr('cx', d => x(d.startTime))
     .attr('cy', d => y(d.duration))
     .on('mouseover', d => {
       div.transition()
-            .duration(200)
-            .style('opacity', .9);
+      .duration(200)
+      .style('opacity', .9);
       div	.html(formatTime(d.startTime) + '<br/>'  + d.duration)
-            .style('left', (d3.event.pageX) + 'px')
-            .style('top', (d3.event.pageY - 28) + 'px');
+      .style('left', (d3.event.pageX) + 'px')
+      .style('top', (d3.event.pageY - 28) + 'px');
     })
-    .on('mouseout', d => {
+    .on('mouseout', () => {
       div.transition()
-            .duration(500)
-            .style('opacity', 0);
+      .duration(500)
+      .style('opacity', 0);
     })
     .on('click', d => console.log(d));
+  });
 
   svg.append('g')
     .attr('class', 'x axis')
@@ -81,24 +87,4 @@ d3.json('data.json', (error, dataSets) => {
   svg.append('g')
     .attr('class', 'y axis')
     .call(yAxis);
-  // console.log(d3.extent(data, d => d.startTime));
 });
-
-// d3.json('data.json', (error, dataSets) => {
-//   const labels = dataSets.map(x => x.label);
-//   const data = dataSets.map(x => x.data)[0];
-//   console.log(labels);
-//   console.log(data);
-//   const x = d => d.duration;
-//   const y = d => parseDate(d.startTime);
-//   console.log(data.map(d => y(d)));
-//   console.log(data.map(d => x(d)));
-//
-//   // const date = data[0][0].startTime;
-//   // console.log(date);
-//   // // console.log(date.substring(0, 10));
-//   // console.log(date);
-//   // const parsedDate = parseDate(date);
-// });
-// console.log(parseDate);
-// console.log(formatTime);
